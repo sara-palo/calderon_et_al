@@ -44,10 +44,8 @@ NewPPB_EM %>%
   guides(colour = guide_legend(override.aes = list(size = 0.5))) +
   geom_vline(xintercept = c(-0.5, 0.5), col = "black") +
   geom_hline(yintercept = -log10(0.05), col = "black") +
-  geom_label_repel(
+  geom_text_repel(
     data = NewPPB_EM[c(top_pos_EM, top_neg_EM),],
-    box.padding = 0.4,
-    fill = 'white',
     max.overlaps = 20,
     show.legend = F,
     fontface = "italic"
@@ -95,10 +93,8 @@ NewPPB_AD %>%
   guides(colour = guide_legend(override.aes = list(size = 0.5))) +
   geom_vline(xintercept = c(-0.5, 0.5), col = "black") +
   geom_hline(yintercept = -log10(0.05), col = "black") +
-  geom_label_repel(
+  geom_text_repel(
     data = NewPPB_AD[c(top_pos_AD, top_neg_AD),],
-    box.padding = 0.4,
-    fill = 'white',
     max.overlaps = 20,
     show.legend = F,
     fontface = "italic"

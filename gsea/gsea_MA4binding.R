@@ -3,6 +3,7 @@ library(data.table)
 library(ggplot2)
 library(readxl)
 library(dplyr)
+library(stringr)
 
 set.seed(12345)
 
@@ -10,6 +11,16 @@ embryo_preproB <- read.table('gsea/Embryo_PreproB_Cre+_vs_Cre-_for_Preprob_Only_
 
 kerry <- read_xls('gsea/kerry_2017_s1.xls', sheet = 1)
 kerry_all <- kerry$`All targets, genes names (2597 unique)` %>% unique() %>% na.omit()
+
+# manually fix the fact that the excel sheet was published with some gene names converted to dates 
+kerry_all <- str_replace(kerry_all, pattern = '37500', replacement =  'SEPT2') %>% 
+  str_replace(pattern = '38961', replacement = 'SEPT6') %>% 
+  str_replace(pattern = '42248', replacement = 'SEPT15') %>%
+  str_replace(pattern = '38412', replacement = 'MARCH5') %>%
+  str_replace(pattern = '40787', replacement = 'SEPT11') %>%
+  str_replace(pattern = '39142', replacement = 'MARCH7') %>%
+  str_replace(pattern = '38777', replacement = 'MARCH6') %>%
+  str_replace(pattern = '40057', replacement = 'SEPT9')
 
 # the mouse_human_genes file was generated in December 2023 through:
 # mouse_human_genes <- read.csv("http://www.informatics.jax.org/downloads/reports/HOM_MouseHumanSequence.rpt", sep="\t")
@@ -59,7 +70,6 @@ for(dup in duplicated){
   tmp <- m2h[m2h$mouseGene %in% dup, ]
   
   if(length(kerry_all[(kerry_all %in% tmp$humanGene)]) > 0){
-    
     use <- data.frame(mouseGene = dup, humanGene = kerry_all[(kerry_all %in% tmp$humanGene)])
     m2h <- subset(m2h, ! (mouseGene == use$mouseGene & ! humanGene == use$humanGene))
   }
@@ -70,7 +80,7 @@ table(m2h[m2h$mouseGene %in% duplicated, 'humanGene'] %in% kerry_all) #none of t
 
 embryo_preproB$humanGene <- m2h[match(rownames(embryo_preproB), m2h$mouseGene), 'humanGene']
 
-# for the genes with no human counterpart, just use the caps version of the mouse name
+# for the genes with no human counterpart, use the caps version of the mouse name
 embryo_preproB[is.na(embryo_preproB$humanGene), 'humanGene'] <- toupper(rownames(embryo_preproB[is.na(embryo_preproB$humanGene),]))
 
 # there are still some duplicated human gene names
@@ -81,11 +91,6 @@ ranks_cre_pos <- embryo_preproB$avg_log2FC
 names(ranks_cre_pos) <- embryo_preproB$humanGene
 
 table(names(ranks_cre_pos) %in% kerry_all)
-
-# Note that the excel sheet with the binding sites has had the names of genes like SEPT1 automatically converted to dates, and 
-# when turned back into text they become things like "37500". Does not seem to be a problem for this specific gene list however
-names(ranks_cre_pos)[grep(names(ranks_cre_pos), pattern = 'SEP')]
-names(ranks_cre_pos)[grep(names(ranks_cre_pos), pattern = 'MAR')]
 
 plotEnrichment(kerry_all,
                ranks_cre_pos) + labs(title = "Kerry SEM all MLL-AF4 binding")
