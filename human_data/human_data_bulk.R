@@ -2,7 +2,6 @@ invisible(lapply(list(
   "stringr",
   "biomaRt",
   "ggplot2",
-  "pheatmap",
   "DESeq2",
   "readxl"
 ), FUN = function(x) {
@@ -16,8 +15,6 @@ external_data <- 'BALL-1988S-HTSeq'
 # load genes of interest (GOI)
 goi_up <- read_xlsx('human_data/Leuk signature cluster 5 human.xlsx', sheet = 1, col_names = 'gene')
 goi_dn <- read_xlsx('human_data/Leuk signature cluster 5 human.xlsx', sheet = 2, col_names = 'gene')
-
-goi <- c(goi_up$gene, goi_dn$gene)
 
 sample_table <- read.table(paste0(external_data, '/subtypes.tsv'),
                            header = TRUE, dec = ",", sep = "\t", quote = '""')
@@ -95,27 +92,12 @@ ids_up <- getBM(
   mart = ensembl
 )
 
-ids2 <- getBM(
-  attributes = c("ensembl_gene_id", "hgnc_symbol"),
-  filters = "hgnc_symbol",
-  values = c('HMGA2', 'LIN28B'),
-  mart = ensembl
-)
-
 intgroup <- c("type", "age", "gender", "RNA_lib", "age_group") #
 
 select <- rownames(vsd) %in% ids_up$ensembl_gene_id
 
 length(select)
 table(select)
-
-ensm_to_sym <- data.frame(
-  ensblID = rownames(assay(vsd)[select, ]),
-  gene_sym = getBM(
-    attributes = "hgnc_symbol", filters = "ensembl_gene_id",
-    values = rownames(assay(vsd)[select, ]), mart = ensembl
-  )
-)
 
 intgroup_df <- as.data.frame(colData(vsd)[, intgroup, drop = FALSE])
 
@@ -128,9 +110,9 @@ vsd_df <- sapply(vsd_df, function(vsd_df) {
 means <- rowMeans(vsd_df)
 vsd_df <- cbind.data.frame(intgroup_df, means)
 
-p1 <- ggplot(data = vsd_df, aes_string(
-  y = "means", x = "type",
-  fill = "type"
+p1 <- ggplot(data = vsd_df, aes(
+  y = means, x = type,
+  fill = type
 )) +
   geom_boxplot() +
   coord_fixed() +
@@ -138,7 +120,7 @@ p1 <- ggplot(data = vsd_df, aes_string(
   theme(aspect.ratio = 2) +
   ylab("Z-scored mean expression") +
   xlab("") + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 print(p1)
 ggsave(plot = p1, 'figs/upreg_sign_subtypes.pdf')
 
@@ -148,24 +130,16 @@ res
 write.csv(res$type, 'figs/upreg_sign_subtypes_stats.csv')
 
 
-select <- rownames(vsd) %in% ids2[ids2$hgnc_symbol == 'HMGA2', 'ensembl_gene_id']
+select <- rownames(vsd) %in% ids_up[ids_up$hgnc_symbol == 'HMGA2', 'ensembl_gene_id']
 table(select)
 
 HMGA2 <- assay(vsd)[select, ]
 HMGA2 <- (HMGA2 - mean(HMGA2)) / sd(HMGA2)
 intgroup_df$HMGA2 <- HMGA2
 
-select <- rownames(vsd) %in% ids2[ids2$hgnc_symbol == 'LIN28B', 'ensembl_gene_id']
-table(select)
-
-LIN28B <- assay(vsd)[select, ]
-LIN28B <- (LIN28B - mean(LIN28B)) / sd(LIN28B)
-intgroup_df$LIN28B <- LIN28B
-
-
-ggplot(data = intgroup_df, aes_string(
-  y = "HMGA2", x = "type",
-  fill = "type"
+ggplot(data = intgroup_df, aes(
+  y = HMGA2, x = type,
+  fill = type
 )) +
   geom_boxplot() +
   coord_fixed() +
@@ -173,31 +147,25 @@ ggplot(data = intgroup_df, aes_string(
   theme(aspect.ratio = 2) +
   ylab("Z-scored expression") +
   xlab("") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-ggsave('figs/HMGA2.pdf')
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+ggsave('figs/HMGA2_subtypes.pdf')
 
 res_aov <- aov(HMGA2 ~ type, data = intgroup_df)
 res <- TukeyHSD(res_aov)
 res
 write.csv(res$type, 'figs/HMGA2_stats.csv')
 
-
-ggplot(data = intgroup_df, aes_string(
-  y = "LIN28B", x = "type",
-  fill = "type"
+ggplot(data = intgroup_df, aes(
+  y = HMGA2, x = type,
+  fill = age_group
 )) +
   geom_boxplot() +
   coord_fixed() +
   theme_bw() +
-  theme(aspect.ratio = 2) +
+  theme(aspect.ratio = 0.5) +
   ylab("Z-scored expression") +
   xlab("") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-ggsave('figs/LIN28B.pdf')
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+ggsave('figs/HMGA2_age_subtypes.pdf')
 
-
-res_aov <- aov(LIN28B ~ type, data = intgroup_df)
-res <- TukeyHSD(res_aov)
-res
-write.csv(res$type, 'figs/LIN28B_stats.csv')
 
