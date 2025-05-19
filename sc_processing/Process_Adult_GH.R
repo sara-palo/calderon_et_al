@@ -20,84 +20,84 @@ spring[["MostLikelyName"]] <- spring.meta$Most.likely.name[match(colnames(spring
 summer[["MostLikelyName"]] <- summer.meta$Most.likely.name[match(colnames(summer),rownames(summer.meta))]
 
 
-pbmc <- merge(spring, y = summer, add.cell.ids = c("spring", "summer"), project = "adult")
+adlt <- merge(spring, y = summer, add.cell.ids = c("spring", "summer"), project = "adult")
 
-pbmc[["percent.mt"]] <- PercentageFeatureSet(pbmc, pattern = "^mt-")
+adlt[["percent.mt"]] <- PercentageFeatureSet(adlt, pattern = "^mt-")
 
-plot1 <- FeatureScatter(pbmc, feature1 = "nCount_RNA", feature2 = "percent.mt")
-plot2 <- FeatureScatter(pbmc, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1 <- FeatureScatter(adlt, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(adlt, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
 plot1 + plot2
 
-#pbmc <- subset(pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < 7500 & percent.mt < 10 & nCount_RNA >1000 & percent.mt > 0.5)
-pbmc <- subset(pbmc, subset = nFeature_RNA > 200 & percent.mt < 10 & nCount_RNA >1000& nFeature_RNA)
+#adlt <- subset(adlt, subset = nFeature_RNA > 200 & nFeature_RNA < 7500 & percent.mt < 10 & nCount_RNA >1000 & percent.mt > 0.5)
+adlt <- subset(adlt, subset = nFeature_RNA > 200 & percent.mt < 10 & nCount_RNA >1000& nFeature_RNA)
 
 
-pbmc <- pbmc[-sort(c(grep("^Rps",rownames(pbmc)),grep("^Rpl",rownames(pbmc)))),]
+adlt <- adlt[-sort(c(grep("^Rps",rownames(adlt)),grep("^Rpl",rownames(adlt)))),]
 
 
-pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 10000)
-pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
-all.genes <- rownames(pbmc)
-pbmc <- ScaleData(pbmc, features = all.genes)
+adlt <- NormalizeData(adlt, normalization.method = "LogNormalize", scale.factor = 10000)
+adlt <- FindVariableFeatures(adlt, selection.method = "vst", nfeatures = 2000)
+all.genes <- rownames(adlt)
+adlt <- ScaleData(adlt, features = all.genes)
 
-pbmc <- RunPCA(pbmc, features = VariableFeatures(object = pbmc))
+adlt <- RunPCA(adlt, features = VariableFeatures(object = adlt))
 
-pbmc <- RunHarmony(pbmc, group.by.vars = "orig.ident")
+adlt <- RunHarmony(adlt, group.by.vars = "orig.ident")
 
-#pbmc <- FindNeighbors(pbmc, dims = 1:30)
-pbmc <- FindNeighbors(pbmc, reduction = "harmony",dims = 1:30)
-pbmc <- FindClusters(pbmc, resolution = 0.5)
+#adlt <- FindNeighbors(adlt, dims = 1:30)
+adlt <- FindNeighbors(adlt, reduction = "harmony",dims = 1:30)
+adlt <- FindClusters(adlt, resolution = 0.5)
 
-#pbmc <- RunUMAP(pbmc, dims = 1:30)
-pbmc <- RunUMAP(pbmc, reduction = "harmony", dims = 1:30)
-#pbmc[["MLN"]] <- cells.needed$Most.likely.name[match(colnames(pbmc),nms)]
+#adlt <- RunUMAP(adlt, dims = 1:30)
+adlt <- RunUMAP(adlt, reduction = "harmony", dims = 1:30)
+#adlt[["MLN"]] <- cells.needed$Most.likely.name[match(colnames(adlt),nms)]
 
-DimPlot(pbmc, reduction = "umap",group.by="orig.ident")
+DimPlot(adlt, reduction = "umap",group.by="orig.ident")
 
 
 
-FeaturePlot(pbmc,"Hmga2")
+FeaturePlot(adlt,"Hmga2")
 
 
 ##
 
-scConf = createConfig(pbmc)
-makeShinyApp(pbmc, scConf, gene.mapping = TRUE,shiny.title = "Adult- with Harmony integration",shiny.dir = "shinyApp_Adult_withHarmony/")
+scConf = createConfig(adlt)
+makeShinyApp(adlt, scConf, gene.mapping = TRUE,shiny.title = "Adult- with Harmony integration",shiny.dir = "shinyApp_Adult_withHarmony/")
 
 
-FeaturePlot(pbmc,"Hmga2")+DimPlot(pbmc, group.by=c("MLN","seurat_cluster"))
+FeaturePlot(adlt,"Hmga2")+DimPlot(adlt, group.by=c("MLN","seurat_cluster"))
 
 
 #######
 #Diffs
 
-pbmc <- SetIdent(pbmc,value="MostLikelyName")
+adlt <- SetIdent(adlt,value="MostLikelyName")
 
-pbmc.markers <- FindAllMarkers(pbmc, only.pos = TRUE)
+adlt.markers <- FindAllMarkers(adlt, only.pos = TRUE)
 
-pbmc.markers %>%
+adlt.markers %>%
     group_by(cluster) %>%
     dplyr::filter(avg_log2FC > 1) %>% dplyr::filter(p_val_adj < 0.1) -> adult.diffs
 
 
 write.table(adult.diffs,"Adult_differentials_log2FC_1_padj_0.1.txt",row.names=T,col.names=NA,quote=F,sep="\t")
 
-pbmc.markers %>%
+adlt.markers %>%
     group_by(cluster) %>%
     dplyr::filter(avg_log2FC > 1) %>% dplyr::filter(p_val_adj < 0.1) %>%
     slice_head(n = 20) %>%
     ungroup() -> top20
-DoHeatmap(pbmc, features = top20$gene) + NoLegend()
+DoHeatmap(adlt, features = top20$gene) + NoLegend()
 
 pdf("Adult_Top20_markers__log2FC_1_padj_0.1.pdf",height=8,width=13)
-DoHeatmap(pbmc, features = top20$gene) + NoLegend()
+DoHeatmap(adlt, features = top20$gene) + NoLegend()
 dev.off()
 
 ####################################
 
-PreproB_Cre.markers <- FindMarkers(pbmc, ident.1 = "PreproB_Cre-", ident.2 = "PreproB_Cre+")
-ProB_Cre.markers <- FindMarkers(pbmc, ident.1 = "ProB_Cre-", ident.2 = "ProB_Cre+")
-Cre.markers <- FindMarkers(pbmc, ident.1 = "Cre-", ident.2 = "Cre+")
+PreproB_Cre.markers <- FindMarkers(adlt, ident.1 = "PreproB_Cre-", ident.2 = "PreproB_Cre+")
+ProB_Cre.markers <- FindMarkers(adlt, ident.1 = "ProB_Cre-", ident.2 = "ProB_Cre+")
+Cre.markers <- FindMarkers(adlt, ident.1 = "Cre-", ident.2 = "Cre+")
 
 write.table(PreproB_Cre.markers,"Adult_PreproB_Cre-_vs_Cre+.txt",row.names=T,col.names=NA,quote=F,sep="\t")
 write.table(ProB_Cre.markers,"Adult_ProB_Cre-_vs_Cre+.txt",row.names=T,col.names=NA,quote=F,sep="\t")
@@ -105,4 +105,4 @@ write.table(Cre.markers,"Adult_Cre_Cre-_vs_Cre+.txt",row.names=T,col.names=NA,qu
 
 
 
-VlnPlot(pbmc, features =rownames(PreproB_Cre.markers)[1:10])
+VlnPlot(adlt, features =rownames(PreproB_Cre.markers)[1:10])
